@@ -6,8 +6,8 @@ ENV PATH="$VIRTUAL_ENV/bin:/app:$PATH"
 
 RUN /opt/venv/bin/python3 -m pip install --upgrade pip
 
-RUN mkdir -p app/import_worker
-WORKDIR /app/import_worker
+RUN mkdir -p app
+WORKDIR /app
 
 COPY requirements.txt .
 COPY worker ./worker
@@ -16,4 +16,4 @@ RUN pip --default-timeout=240 install -r requirements.txt
 
 WORKDIR /app
 
-ENTRYPOINT ["celery", "-A","import_worker.worker.celery_worker","worker", "-l", "info", "--uid=nobody", "--gid=nogroup"]
+ENTRYPOINT ["celery", "-A","worker.celery_worker","worker", "-l", "info", "--uid=nobody", "--gid=nogroup"]
