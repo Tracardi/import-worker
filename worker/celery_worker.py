@@ -1,8 +1,7 @@
 import time
 
 from celery import Celery
-
-from worker.config import redis_config
+from .config import redis_config
 
 celery = Celery(
     __name__,
