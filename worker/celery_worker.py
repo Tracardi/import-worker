@@ -12,6 +12,6 @@ celery = Celery(
 
 @celery.task(bind=True)
 def run_celery_replay_job(self, config, credentials):
-    for x in range(0, 100):
-        self.update_state(state="PROGRESS", meta={'current': x, 'total': 100})
+    for x in range(0, 1000):
+        self.update_state(state="PROGRESS", meta={'current': x/100, 'total': 100})
         time.sleep(.5)
