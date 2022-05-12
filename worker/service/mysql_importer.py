@@ -17,6 +17,6 @@ class MySqlImportManager:
             response = requests.post(f"{tracardi_api_url}{self.webhook_url}", json=data)
             yield progress, batch
 
-    def __del__(self):
+    def close(self):
         if self.db:
             self.db.close()

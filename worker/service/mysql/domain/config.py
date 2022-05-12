@@ -24,16 +24,15 @@ class MySQLImporter(BaseModel):
     table_name: NamedEntity
     batch: int
 
-    def count(self, connection):
-        cursor = connection.cursor(dictionary=True)
+    def count(self, cursor):
         sql = f"SELECT COUNT(1) as `count` FROM {self.database_name.id}.{self.table_name.id}"
         cursor.execute(sql)
         return int(cursor.fetchone()['count'])
 
     def data(self, connection, batch):
-        number_of_records = self.count(connection)
+        cursor = connection.cursor(dictionary=True)
+        number_of_records = self.count(cursor)
         if number_of_records > 0:
-            cursor = connection.cursor(dictionary=True)
             for batch_number, start in enumerate(range(0, number_of_records, batch)):
                 sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {start+batch}"
                 cursor.execute(sql)

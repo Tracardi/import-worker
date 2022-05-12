@@ -26,6 +26,8 @@ def import_mysql_data(celery_job, import_config, credentials, source_id, tracard
         if celery_job:
             celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
 
+    importer.close()
+
 
 @celery.task(bind=True)
 def run_celery_import_job(self, import_config, credentials, source_id, tracardi_api_url):
