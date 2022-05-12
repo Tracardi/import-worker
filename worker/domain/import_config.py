@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import validator, BaseModel
+from pydantic import validator, BaseModel, AnyHttpUrl
 
 from worker.domain.named_entity import NamedEntity
 
@@ -8,6 +8,8 @@ from worker.domain.named_entity import NamedEntity
 class ImportConfig(BaseModel):
     name: str
     description: Optional[str] = ""
+    api_url: AnyHttpUrl
+    event_source: NamedEntity
     event_type: str
     module: str
     config: dict

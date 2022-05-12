@@ -1,5 +1,3 @@
-import time
-
 from celery import Celery
 from worker.config import redis_config
 from worker.domain.named_entity import NamedEntity
@@ -15,7 +13,6 @@ celery = Celery(
 
 
 def import_mysql_data(celery_job, import_config, credentials, source_id, tracardi_api_url):
-    print(import_config, credentials, source_id, tracardi_api_url)
     import_config = ImportConfig(**import_config)
     webhook_url = f"/collect/{import_config.event_type}/{source_id}"
 
@@ -28,7 +25,6 @@ def import_mysql_data(celery_job, import_config, credentials, source_id, tracard
             celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
 
 
-
 @celery.task(bind=True)
 def run_celery_import_job(self, import_config, credentials, source_id, tracardi_api_url):
     import_mysql_data(self, import_config, credentials, source_id, tracardi_api_url)
@@ -38,18 +34,23 @@ if __name__ == "__main__":
     import_mysql_data(
         celery_job=None,
         import_config={
-        "name": 'tesst',
-        "description": "desc",
-        "event_type": "import",
-        "module": "mod",
-        "config": {
-            "database_name": NamedEntity(id="mysql", name="mysql").dict(),
-            "table_name": NamedEntity(id="time_zone", name="time_zone").dict(),
-            "batch": 100
+            "name": 'tesst',
+            "description": "desc",
+            "api_url": "http://localhost:8686",
+            "event_source": NamedEntity(
+                id="@test-source",
+                name="test"
+            ).dict(),
+            "event_type": "import",
+            "module": "mod",
+            "config": {
+                "database_name": NamedEntity(id="mysql", name="mysql").dict(),
+                "table_name": NamedEntity(id="time_zone", name="time_zone").dict(),
+                "batch": 100
+            },
+            "enabled": True,
+            "transitional": False
         },
-        "enabled": True,
-        "transitional": False
-    },
         credentials=MysqlConnectionConfig(
             user='root',
             password='root',
