@@ -31,10 +31,12 @@ class MySQLImporter(BaseModel):
         number_of_records = self.count(cursor)
         if number_of_records > 0:
             for batch_number, start in enumerate(range(0, number_of_records, batch)):
-                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {start + batch}"
+                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {batch}"
+                print(sql)
                 cursor.execute(sql)
                 for record, data in enumerate(cursor):
                     progress = ((start + record + 1) / number_of_records) * 100
+                    print(progress, (start + record + 1), number_of_records)
                     yield data, progress, batch_number + 1
         cursor.close()
         connection.close()

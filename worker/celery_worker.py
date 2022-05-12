@@ -44,7 +44,7 @@ if __name__ == "__main__":
         "module": "mod",
         "config": {
             "database_name": NamedEntity(id="mysql", name="mysql").dict(),
-            "table_name": NamedEntity(id="db", name="db").dict(),
+            "table_name": NamedEntity(id="time_zone", name="time_zone").dict(),
             "batch": 100
         },
         "enabled": True,
