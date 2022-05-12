@@ -12,22 +12,22 @@ celery = Celery(
 )
 
 
-def import_mysql_data(celery_job, import_config, credentials, source_id, tracardi_api_url):
+def import_mysql_data(celery_job, import_config, credentials):
     import_config = ImportConfig(**import_config)
-    webhook_url = f"/collect/{import_config.event_type}/{source_id}"
+    webhook_url = f"/collect/{import_config.event_type}/{import_config.event_source}"
 
     importer = MySqlImportManager(MysqlConnectionConfig(**credentials),
                                   importer=MySQLImporter(**import_config.config),
                                   webhook_url=webhook_url)
 
-    for progress, batch in importer.run(tracardi_api_url):
+    for progress, batch in importer.run(import_config.api_url):
         if celery_job:
             celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
 
 
 @celery.task(bind=True)
-def run_celery_import_job(self, import_config, credentials, source_id, tracardi_api_url):
-    import_mysql_data(self, import_config, credentials, source_id, tracardi_api_url)
+def run_celery_import_job(self, import_config, credentials):
+    import_mysql_data(self, import_config, credentials)
 
 
 if __name__ == "__main__":
