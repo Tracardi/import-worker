@@ -14,7 +14,7 @@ celery = Celery(
 
 def import_mysql_data(celery_job, import_config, credentials):
     import_config = ImportConfig(**import_config)
-    webhook_url = f"/collect/{import_config.event_type}/{import_config.event_source}"
+    webhook_url = f"/collect/{import_config.event_type}/{import_config.event_source.id}"
 
     importer = MySqlImportManager(MysqlConnectionConfig(**credentials),
                                   importer=MySQLImporter(**import_config.config),

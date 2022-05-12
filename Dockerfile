@@ -10,10 +10,9 @@ RUN mkdir -p app
 WORKDIR /app
 
 COPY requirements.txt .
-COPY worker ./worker
-
 RUN pip --default-timeout=240 install -r requirements.txt
 
+COPY worker ./worker
 WORKDIR /app
 
 ENTRYPOINT ["celery", "-A","worker.celery_worker","worker", "-l", "info", "--uid=nobody", "--gid=nogroup"]

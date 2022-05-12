@@ -14,8 +14,9 @@ class MySqlImportManager:
         if tracardi_api_url[-1] == '/':
             tracardi_api_url = tracardi_api_url[:-1]
         for data, progress, batch in self.importer.data(self.credentials, self.importer.batch):
-            response = requests.post(f"{tracardi_api_url}{self.webhook_url}", json=data)
+            url = f"{tracardi_api_url}{self.webhook_url}"
+            response = requests.post(url, json=data)
             # print(data)
-            # print(response.json())
+            print(url, response.json())
             yield progress, batch
 
