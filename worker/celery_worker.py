@@ -15,6 +15,7 @@ celery = Celery(
 
 
 def import_mysql_data(celery_job, import_config, credentials, source_id, tracardi_api_url):
+    print(import_config, credentials, source_id, tracardi_api_url)
     import_config = ImportConfig(**import_config)
     webhook_url = f"/collect/{import_config.event_type}/{source_id}"
 
@@ -26,7 +27,6 @@ def import_mysql_data(celery_job, import_config, credentials, source_id, tracard
         if celery_job:
             celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
 
-    importer.close()
 
 
 @celery.task(bind=True)
@@ -53,9 +53,9 @@ if __name__ == "__main__":
         credentials=MysqlConnectionConfig(
             user='root',
             password='root',
-            host='localhost',
+            host='192.168.1.103',
             port=3306
         ).dict(),
         source_id="a8698bd6-88d5-4263-80b7-193a79a5019b",
-        tracardi_api_url="http://localhost:8686/"
+        tracardi_api_url="http://192.168.1.103:8686/"
     )

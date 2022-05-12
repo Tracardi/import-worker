@@ -10,16 +10,8 @@ class MysqlConnectionConfig(BaseModel):
     host: str
     port: int = 3306
 
-    def connect(self):
-        return mysql.connector.connect(
-            host=self.host,
-            user=self.user,
-            password=self.password
-        )
-
 
 class MySQLImporter(BaseModel):
-
     database_name: NamedEntity
     table_name: NamedEntity
     batch: int
@@ -29,14 +21,20 @@ class MySQLImporter(BaseModel):
         cursor.execute(sql)
         return int(cursor.fetchone()['count'])
 
-    def data(self, connection, batch):
+    def data(self, credentials: MysqlConnectionConfig, batch):
+        connection = mysql.connector.connect(
+            host=credentials.host,
+            user=credentials.user,
+            password=credentials.password
+        )
         cursor = connection.cursor(dictionary=True)
         number_of_records = self.count(cursor)
         if number_of_records > 0:
             for batch_number, start in enumerate(range(0, number_of_records, batch)):
-                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {start+batch}"
+                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {start + batch}"
                 cursor.execute(sql)
                 for record, data in enumerate(cursor):
                     progress = ((start + record + 1) / number_of_records) * 100
-                    yield data, progress, batch_number+1
-                cursor.close()
+                    yield data, progress, batch_number + 1
+        cursor.close()
+        connection.close()
