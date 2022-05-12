@@ -1,0 +1,43 @@
+import mysql.connector
+from pydantic import BaseModel
+
+from worker.domain.named_entity import NamedEntity
+
+
+class MysqlConnectionConfig(BaseModel):
+    user: str
+    password: str = None
+    host: str
+    port: int = 3306
+
+    def connect(self):
+        return mysql.connector.connect(
+            host=self.host,
+            user=self.user,
+            password=self.password
+        )
+
+
+class MySQLImporter(BaseModel):
+
+    database_name: NamedEntity
+    table_name: NamedEntity
+    batch: int
+
+    def count(self, connection):
+        cursor = connection.cursor(dictionary=True)
+        sql = f"SELECT COUNT(1) as `count` FROM {self.database_name.id}.{self.table_name.id}"
+        cursor.execute(sql)
+        return int(cursor.fetchone()['count'])
+
+    def data(self, connection, batch):
+        number_of_records = self.count(connection)
+        if number_of_records > 0:
+            cursor = connection.cursor(dictionary=True)
+            for batch_number, start in enumerate(range(0, number_of_records, batch)):
+                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {start+batch}"
+                cursor.execute(sql)
+                for record, data in enumerate(cursor):
+                    progress = ((start + record + 1) / number_of_records) * 100
+                    yield data, progress, batch_number+1
+                cursor.close()

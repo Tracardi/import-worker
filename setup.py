@@ -9,7 +9,10 @@ setup(
     packages=['worker'],
     install_requires=[
         'celery == 5.2.6',
-        'redis'
+        'redis',
+        'mysql-connector-python == 8.0.29',
+        'pydantic',
+        'requests'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
