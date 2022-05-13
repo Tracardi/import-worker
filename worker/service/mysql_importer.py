@@ -16,7 +16,6 @@ class MySqlImportManager:
         for data, progress, batch in self.importer.data(self.credentials, self.importer.batch):
             url = f"{tracardi_api_url}{self.webhook_url}"
             response = requests.post(url, json=data)
-            # print(data)
             print(url, response.json())
             yield progress, batch
 

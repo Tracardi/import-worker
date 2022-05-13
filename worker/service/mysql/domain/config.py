@@ -1,3 +1,6 @@
+import json
+from datetime import datetime
+
 import mysql.connector
 from pydantic import BaseModel
 
@@ -15,6 +18,14 @@ class MySQLImporter(BaseModel):
     database_name: NamedEntity
     table_name: NamedEntity
     batch: int
+
+    def _default_none_serializable_data(self, value):
+        if isinstance(value, datetime):
+            return str(value)
+        elif isinstance(value, set):
+            return list(value)
+        else:
+            return f"<<non-serializable: {type(value).__qualname__}>>"
 
     def count(self, cursor):
         sql = f"SELECT COUNT(1) as `count` FROM {self.database_name.id}.{self.table_name.id}"
@@ -35,8 +46,10 @@ class MySQLImporter(BaseModel):
                 print(sql)
                 cursor.execute(sql)
                 for record, data in enumerate(cursor):
+                    json_payload = json.dumps(data, default=self._default_none_serializable_data)
+                    data = json.loads(json_payload)
+                    print(data)
                     progress = ((start + record + 1) / number_of_records) * 100
-                    print(progress, (start + record + 1), number_of_records)
                     yield data, progress, batch_number + 1
         cursor.close()
         connection.close()
