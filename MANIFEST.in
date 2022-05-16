@@ -1,0 +1,2 @@
+recursive-include worker/domain *
+recursive-include worker/service *
