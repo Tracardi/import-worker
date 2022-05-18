@@ -32,7 +32,7 @@ class MySQLImporter(BaseModel):
         cursor.execute(sql)
         return int(cursor.fetchone()['count'])
 
-    def data(self, credentials: MysqlConnectionConfig, batch):
+    def data(self, credentials: MysqlConnectionConfig):
         connection = mysql.connector.connect(
             host=credentials.host,
             user=credentials.user,
@@ -41,14 +41,12 @@ class MySQLImporter(BaseModel):
         cursor = connection.cursor(dictionary=True)
         number_of_records = self.count(cursor)
         if number_of_records > 0:
-            for batch_number, start in enumerate(range(0, number_of_records, batch)):
-                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {batch}"
-                print(sql)
+            for batch_number, start in enumerate(range(0, number_of_records, self.batch)):
+                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {self.batch}"
                 cursor.execute(sql)
                 for record, data in enumerate(cursor):
                     json_payload = json.dumps(data, default=self._default_none_serializable_data)
                     data = json.loads(json_payload)
-                    print(data)
                     progress = ((start + record + 1) / number_of_records) * 100
                     yield data, progress, batch_number + 1
         cursor.close()
