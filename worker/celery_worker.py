@@ -88,7 +88,6 @@ if __name__ == "__main__":
                 "batch": 2,
                 "database_name": {"id": "Rfam", "name": "Rfam"},
                 "query": "SELECT * FROM family WHERE match_pair_node=false",
-                "port": 4497
             },
             "enabled": True,
             "transitional": False
