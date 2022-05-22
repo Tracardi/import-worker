@@ -14,9 +14,9 @@ class MysqlConnectionConfig(BaseModel):
     port: int = 3306
 
 
-class MySQLImporter(BaseModel):
+class MySQLQueryImporter(BaseModel):
     database_name: NamedEntity
-    table_name: NamedEntity
+    query: str
     batch: int
 
     def _default_none_serializable_data(self, value):
@@ -28,7 +28,7 @@ class MySQLImporter(BaseModel):
             return f"<<non-serializable: {type(value).__qualname__}>>"
 
     def count(self, cursor):
-        sql = f"SELECT COUNT(1) as `count` FROM {self.database_name.id}.{self.table_name.id}"
+        sql = f"SELECT COUNT(1) as `count` FROM ({self.query}) AS tracardi_import_temporary_table"
         cursor.execute(sql)
         return int(cursor.fetchone()['count'])
 
@@ -37,13 +37,14 @@ class MySQLImporter(BaseModel):
             host=credentials.host,
             user=credentials.user,
             password=credentials.password,
-            port=credentials.port
+            port=credentials.port,
+            database=self.database_name.id
         )
         cursor = connection.cursor(dictionary=True)
         number_of_records = self.count(cursor)
         if number_of_records > 0:
             for batch_number, start in enumerate(range(0, number_of_records, self.batch)):
-                sql = f"SELECT * FROM {self.database_name.id}.{self.table_name.id} LIMIT {start}, {self.batch}"
+                sql = f"{self.query} LIMIT {start}, {self.batch}"
                 cursor.execute(sql)
                 for record, data in enumerate(cursor):
                     json_payload = json.dumps(data, default=self._default_none_serializable_data)
