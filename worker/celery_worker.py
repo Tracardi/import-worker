@@ -14,7 +14,7 @@ celery = Celery(
 )
 
 
-def import_mysql_data(celery_job, import_config, credentials):
+def import_mysql_table_data(celery_job, import_config, credentials):
     import_config = ImportConfig(**import_config)
     webhook_url = f"/collect/{import_config.event_type}/{import_config.event_source.id}"
 
@@ -57,7 +57,7 @@ def import_mysql_data_with_query(celery_job, import_config, credentials):
 
 @celery.task(bind=True)
 def run_mysql_import_job(self, import_config, credentials):
-    import_mysql_data(self, import_config, credentials)
+    import_mysql_table_data(self, import_config, credentials)
 
 
 @celery.task(bind=True)
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 #    )
 
 # if __name__ == "__main__":
-#     import_mysql_data(
+#     import_mysql_table_data(
 #         celery_job=None,
 #         import_config={
 #             "name": 'tesst',
