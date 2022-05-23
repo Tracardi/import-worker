@@ -3,6 +3,7 @@ from worker.config import redis_config
 from worker.domain.named_entity import NamedEntity
 from worker.service.worker.elastic_worker import ElasticImporter, ElasticCredentials
 from worker.service.worker.mysql_worker import MysqlConnectionConfig, MySQLImporter
+from worker.service.worker.mysql_query_worker import MysqlConnectionConfig as MysqlQueryConnConfig, MySQLQueryImporter
 from worker.service.import_dispatcher import ImportDispatcher
 from worker.domain.import_config import ImportConfig
 
@@ -39,6 +40,21 @@ def import_elastic_data(celery_job, import_config, credentials):
             celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
 
 
+def import_mysql_data_with_query(celery_job, import_config, credentials):
+    import_config = ImportConfig(**import_config)
+    webhook_url = f"/collect/{import_config.event_type}/{import_config.event_source.id}"
+
+    importer = ImportDispatcher(
+        MysqlQueryConnConfig(**credentials),
+        importer=MySQLQueryImporter(**import_config.config),
+        webhook_url=webhook_url
+    )
+
+    for progress, batch in importer.run(import_config.api_url):
+        if celery_job:
+            celery_job.update_state(state="PROGRESS", meta={"current": progress, "total": 100})
+
+
 @celery.task(bind=True)
 def run_mysql_import_job(self, import_config, credentials):
     import_mysql_data(self, import_config, credentials)
@@ -49,32 +65,68 @@ def run_elastic_import_job(self, import_config, credentials):
     import_elastic_data(self, import_config, credentials)
 
 
+@celery.task(bind=True)
+def run_mysql_query_import_job(self, import_config, credentials):
+    import_mysql_data_with_query(self, import_config, credentials)
+
+
 if __name__ == "__main__":
-    import_elastic_data(
+    import_mysql_data_with_query(
         celery_job=None,
         import_config={
-            "name": 'tesst',
+            "name": "test",
             "description": "desc",
             "api_url": "http://localhost:8686",
             "event_source": NamedEntity(
                 id="@test-source",
                 name="test"
             ).dict(),
-            "event_type": "import-es",
+            "event_type": "import-mysql-query",
             "module": "mod",
             "config": {
                 "index": NamedEntity(id="tracardi-log-2022-5", name="mysql").dict(),
-                "batch": 2
+                "batch": 2,
+                "database_name": {"id": "Rfam", "name": "Rfam"},
+                "query": "SELECT * FROM family WHERE match_pair_node=false",
             },
             "enabled": True,
             "transitional": False
         },
-        credentials=ElasticCredentials(
-            url='localhost',
-            scheme='http',
-            port=9200
+        credentials=MysqlQueryConnConfig(
+            host="mysql-rfam-public.ebi.ac.uk",
+            user="rfamro",
+            password=None,
+            port=4497
         ).dict()
     )
+
+
+#if __name__ == "__main__":
+#    import_elastic_data(
+#        celery_job=None,
+#        import_config={
+#            "name": 'tesst',
+#            "description": "desc",
+#            "api_url": "http://localhost:8686",
+#            "event_source": NamedEntity(
+#                id="@test-source",
+#                name="test"
+#            ).dict(),
+#            "event_type": "import-es",
+#            "module": "mod",
+#            "config": {
+#                "index": NamedEntity(id="tracardi-log-2022-5", name="mysql").dict(),
+#                "batch": 2
+#            },
+#            "enabled": True,
+#            "transitional": False
+#        },
+#        credentials=ElasticCredentials(
+#            url='localhost',
+#            scheme='http',
+#            port=9200
+#        ).dict()
+#    )
 
 # if __name__ == "__main__":
 #     import_mysql_data(

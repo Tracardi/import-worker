@@ -3,3 +3,4 @@ redis
 mysql-connector-python==8.0.29
 pydantic
 requests
+elasticsearch
