@@ -6,12 +6,17 @@ from worker.service.worker.mysql_worker import MysqlConnectionConfig, MySQLImpor
 from worker.service.worker.mysql_query_worker import MysqlConnectionConfig as MysqlQueryConnConfig, MySQLQueryImporter
 from worker.service.import_dispatcher import ImportDispatcher
 from worker.domain.import_config import ImportConfig
+from worker.domain.migration_schema import MigrationSchema
+import logging
+import worker.service.migration_workers as migration_workers
 
 celery = Celery(
     __name__,
     broker=redis_config.get_redis_with_password(),
     backend=redis_config.get_redis_with_password()
 )
+
+logger = logging.getLogger("logger")
 
 
 def import_mysql_table_data(celery_job, import_config, credentials):
@@ -55,6 +60,24 @@ def import_mysql_data_with_query(celery_job, import_config, credentials):
             celery_job.update_state(state="PROGRESS", meta={"current": progress, "total": 100})
 
 
+def migrate_data(celery_job, schemas, elastic_host):
+    print("running_migration")
+    schemas = [MigrationSchema(**schema) for schema in schemas]
+
+    chain = None
+    for progress, schema in enumerate(schemas):
+
+        if schema.asynchronous is False:
+            chain = run_migration_worker.s(schema.worker, schema.dict(), elastic_host) if chain is None else \
+                chain | run_migration_worker.s(schema.worker, schema.dict(), elastic_host)
+
+        else:
+            run_migration_worker.delay(schema.worker, schema.dict(), elastic_host)
+
+    if chain is not None:
+        chain()
+
+
 @celery.task(bind=True)
 def run_mysql_import_job(self, import_config, credentials):
     import_mysql_table_data(self, import_config, credentials)
@@ -68,6 +91,24 @@ def run_elastic_import_job(self, import_config, credentials):
 @celery.task(bind=True)
 def run_mysql_query_import_job(self, import_config, credentials):
     import_mysql_data_with_query(self, import_config, credentials)
+
+
+@celery.task(bind=True)
+def run_migration_job(self, schemas, elastic_host):
+    migrate_data(self, schemas, elastic_host)
+
+
+@celery.task(bind=True)
+def run_migration_worker(self, worker_func, schema, elastic_host):
+    try:
+        worker_function = getattr(migration_workers, worker_func)
+
+    except AttributeError:
+        logger.log(level=logging.ERROR, msg=f"No migration worker defined for name {schema.worker}. "
+                                            f"Skipping migration with name {schema.name}")
+        return
+
+    worker_function(self, MigrationSchema(**schema), elastic_host)
 
 
 if __name__ == "__main__":
