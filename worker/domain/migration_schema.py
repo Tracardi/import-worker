@@ -1,8 +1,9 @@
 from typing import Optional
-from worker.domain.named_entity import NamedEntity
+from worker.domain.entity import Entity
 
 
-class MigrationSchema(NamedEntity):
+class MigrationSchema(Entity):
+    index: str
     multi: bool
     script: Optional[str] = None
     worker: str

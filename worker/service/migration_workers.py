@@ -1,5 +1,7 @@
 import requests
 from worker.domain.migration_schema import MigrationSchema
+import time
+from worker.misc.update_progress import update_progress
 
 
 def reindex(celery_job, schema: MigrationSchema, url: str):
@@ -19,5 +21,6 @@ def reindex(celery_job, schema: MigrationSchema, url: str):
         json=body
     ) as response:
 
-        pass
+        #time.sleep(5)
 
+        update_progress(celery_job, 100)
