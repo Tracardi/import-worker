@@ -1,2 +1,2 @@
-docker build . -t tracardi/worker
+docker build .  --no-cache -t tracardi/worker
 docker push tracardi/worker
