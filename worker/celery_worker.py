@@ -72,7 +72,7 @@ def migrate_data(celery_job, schemas, elastic_host):
     for schema in schemas:
         if schema.asynchronous is True:
             jobs.append((
-                f"Moving data from {schema.from_index} to {schema.to_index}",
+                f"Moving data from {schema.copy_index.from_index} to {schema.copy_index.to_index}",
                 run_migration_worker.delay(schema.worker, schema.dict(), elastic_host)
             ))
 

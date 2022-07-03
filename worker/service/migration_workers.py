@@ -1,20 +1,19 @@
 import requests
 from worker.domain.migration_schema import MigrationSchema
-import time
 from worker.misc.update_progress import update_progress
 
 
 def reindex(celery_job, schema: MigrationSchema, url: str):
     body = {
         "source": {
-            "index": schema.from_index
+            "index": schema.copy_index.from_index
         },
         "dest": {
-            "index": schema.to_index
+            "index": schema.copy_index.to_index
         }
     }
-    if schema.script is not None:
-        body["script"] = {"lang": "painless", "source": schema.script}
+    if schema.copy_index.script is not None:
+        body["script"] = {"lang": "painless", "source": schema.copy_index.script}
 
     with requests.post(
         url=f"{url}/_reindex",
