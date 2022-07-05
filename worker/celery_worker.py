@@ -1,4 +1,4 @@
-from celery import Celery
+from celery import Celery, group
 from worker.config import redis_config
 from worker.domain.named_entity import NamedEntity
 from worker.service.worker.elastic_worker import ElasticImporter, ElasticCredentials
@@ -6,12 +6,19 @@ from worker.service.worker.mysql_worker import MysqlConnectionConfig, MySQLImpor
 from worker.service.worker.mysql_query_worker import MysqlConnectionConfig as MysqlQueryConnConfig, MySQLQueryImporter
 from worker.service.import_dispatcher import ImportDispatcher
 from worker.domain.import_config import ImportConfig
+from worker.domain.migration_schema import MigrationSchema
+import logging
+import worker.service.migration_workers as migration_workers
+from worker.misc.update_progress import update_progress
+
 
 celery = Celery(
     __name__,
     broker=redis_config.get_redis_with_password(),
     backend=redis_config.get_redis_with_password()
 )
+
+logger = logging.getLogger("logger")
 
 
 def import_mysql_table_data(celery_job, import_config, credentials):
@@ -23,8 +30,7 @@ def import_mysql_table_data(celery_job, import_config, credentials):
                                 webhook_url=webhook_url)
 
     for progress, batch in importer.run(import_config.api_url):
-        if celery_job:
-            celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
+        update_progress(celery_job, progress)
 
 
 def import_elastic_data(celery_job, import_config, credentials):
@@ -36,8 +42,7 @@ def import_elastic_data(celery_job, import_config, credentials):
                                 webhook_url=webhook_url)
 
     for progress, batch in importer.run(import_config.api_url):
-        if celery_job:
-            celery_job.update_state(state="PROGRESS", meta={'current': progress, 'total': 100})
+        update_progress(celery_job, progress)
 
 
 def import_mysql_data_with_query(celery_job, import_config, credentials):
@@ -51,8 +56,38 @@ def import_mysql_data_with_query(celery_job, import_config, credentials):
     )
 
     for progress, batch in importer.run(import_config.api_url):
+        update_progress(celery_job, progress)
+
+
+def migrate_data(celery_job, schemas, elastic_host):
+    logger.log(level=logging.INFO, msg="running_migration")
+    schemas = [MigrationSchema(**schema) for schema in schemas]
+    total = len(schemas)
+    progress = 0
+
+    update_progress(celery_job, progress, total)
+
+    sync_chain = None
+    jobs = []
+    for schema in schemas:
+        if schema.asynchronous is True:
+            jobs.append((
+                f"Moving data from {schema.copy_index.from_index} to {schema.copy_index.to_index}",
+                run_migration_worker.delay(schema.worker, schema.dict(), elastic_host)
+            ))
+
+        else:
+            sync_chain = run_migration_worker.s(schema.worker, schema.dict(), elastic_host) if sync_chain is None else \
+                sync_chain | run_migration_worker.s(schema.worker, schema.dict(), elastic_host)
+
+        progress += 1
         if celery_job:
-            celery_job.update_state(state="PROGRESS", meta={"current": progress, "total": 100})
+            celery_job.update_state(state="PROGRESS", meta={"current": progress, "total": total})
+
+    if sync_chain is not None:
+        jobs.append(("Required synchronous migration tasks", sync_chain.delay()))
+
+    return [(job_info[0], job_info[1].id) for job_info in jobs]
 
 
 @celery.task(bind=True)
@@ -68,6 +103,24 @@ def run_elastic_import_job(self, import_config, credentials):
 @celery.task(bind=True)
 def run_mysql_query_import_job(self, import_config, credentials):
     import_mysql_data_with_query(self, import_config, credentials)
+
+
+@celery.task(bind=True)
+def run_migration_job(self, schemas, elastic_host):
+    return migrate_data(self, schemas, elastic_host)
+
+
+@celery.task(bind=True)
+def run_migration_worker(self, worker_func, schema, elastic_host):
+    try:
+        worker_function = getattr(migration_workers, worker_func)
+
+    except AttributeError:
+        logger.log(level=logging.ERROR, msg=f"No migration worker defined for name {schema.worker}. "
+                                            f"Skipping migration with name {schema.name}")
+        return
+
+    worker_function(self, MigrationSchema(**schema), elastic_host)
 
 
 if __name__ == "__main__":
