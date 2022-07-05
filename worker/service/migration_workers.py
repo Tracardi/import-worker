@@ -19,7 +19,7 @@ def reindex(celery_job, schema: MigrationSchema, url: str):
         url=f"{url}/_reindex",
         json=body
     ) as response:
-
+        print(response.json())
         #time.sleep(5)
 
         update_progress(celery_job, 100)
