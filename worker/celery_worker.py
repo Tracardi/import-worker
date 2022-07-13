@@ -59,13 +59,14 @@ def import_mysql_data_with_query(celery_job, import_config, credentials):
         update_progress(celery_job, progress)
 
 
-def migrate_data(celery_job, schemas, elastic_host):
+def migrate_data(celery_job, schemas, elastic_host, task_index):
     logger.log(level=logging.INFO, msg="running_migration")
     schemas = [MigrationSchema(**schema) for schema in schemas]
     total = len(schemas)
     progress = 0
 
     update_progress(celery_job, progress, total)
+    add_task(task_index, "Running migration job")
 
     sync_chain = None
     jobs = []
@@ -73,12 +74,12 @@ def migrate_data(celery_job, schemas, elastic_host):
         if schema.asynchronous is True:
             jobs.append((
                 f"Moving data from {schema.copy_index.from_index} to {schema.copy_index.to_index}",
-                run_migration_worker.delay(schema.worker, schema.dict(), elastic_host)
+                run_migration_worker.delay(schema.worker, schema.dict(), elastic_host, task_index)
             ))
 
         else:
-            sync_chain = run_migration_worker.s(schema.worker, schema.dict(), elastic_host) if sync_chain is None else \
-                sync_chain | run_migration_worker.s(schema.worker, schema.dict(), elastic_host)
+            sync_chain = run_migration_worker.s(schema.worker, schema.dict(), elastic_host, task_index) if sync_chain is None else \
+                sync_chain | run_migration_worker.s(schema.worker, schema.dict(), elastic_host, task_index)
 
         progress += 1
         if celery_job:
@@ -106,8 +107,8 @@ def run_mysql_query_import_job(self, import_config, credentials):
 
 
 @celery.task(bind=True)
-def run_migration_job(self, schemas, elastic_host):
-    return migrate_data(self, schemas, elastic_host)
+def run_migration_job(self, schemas, elastic_host, task_index):
+    return migrate_data(self, schemas, elastic_host, task_index)
 
 
 @celery.task(bind=True)
