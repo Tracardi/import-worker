@@ -10,6 +10,7 @@ from worker.domain.migration_schema import MigrationSchema
 import logging
 import worker.service.migration_workers as migration_workers
 from worker.misc.update_progress import update_progress
+from worker.misc.add_task import add_task
 
 
 celery = Celery(
@@ -66,29 +67,23 @@ def migrate_data(celery_job, schemas, elastic_host, task_index):
     progress = 0
 
     update_progress(celery_job, progress, total)
-    add_task(task_index, "Running migration job")
+    add_task(elastic_host, task_index, "Running migration job", celery_job)
 
     sync_chain = None
-    jobs = []
     for schema in schemas:
         if schema.asynchronous is True:
-            jobs.append((
-                f"Moving data from {schema.copy_index.from_index} to {schema.copy_index.to_index}",
-                run_migration_worker.delay(schema.worker, schema.dict(), elastic_host, task_index)
-            ))
+            run_migration_worker.delay(schema.worker, schema.dict(), elastic_host, task_index)
 
         else:
-            sync_chain = run_migration_worker.s(schema.worker, schema.dict(), elastic_host, task_index) if sync_chain is None else \
-                sync_chain | run_migration_worker.s(schema.worker, schema.dict(), elastic_host, task_index)
+            sync_chain = run_migration_worker.s(schema.worker, schema.dict(), elastic_host, task_index) if sync_chain \
+                is None else sync_chain | run_migration_worker.s(schema.worker, schema.dict(), elastic_host, task_index)
 
         progress += 1
         if celery_job:
             celery_job.update_state(state="PROGRESS", meta={"current": progress, "total": total})
 
     if sync_chain is not None:
-        jobs.append(("Required synchronous migration tasks", sync_chain.delay()))
-
-    return [(job_info[0], job_info[1].id) for job_info in jobs]
+        sync_chain.delay()
 
 
 @celery.task(bind=True)
@@ -112,7 +107,7 @@ def run_migration_job(self, schemas, elastic_host, task_index):
 
 
 @celery.task(bind=True)
-def run_migration_worker(self, worker_func, schema, elastic_host):
+def run_migration_worker(self, worker_func, schema, elastic_host, task_index):
     try:
         worker_function = getattr(migration_workers, worker_func)
 
@@ -121,7 +116,7 @@ def run_migration_worker(self, worker_func, schema, elastic_host):
                                             f"Skipping migration with name {schema.name}")
         return
 
-    worker_function(self, MigrationSchema(**schema), elastic_host)
+    worker_function(self, MigrationSchema(**schema), elastic_host, task_index)
 
 
 if __name__ == "__main__":

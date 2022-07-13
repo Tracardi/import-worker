@@ -6,13 +6,12 @@ from typing import Optional
 class Task(BaseModel):
     id: str
     name: str
+    task_id: str
     timestamp: Optional[datetime]
     status: str = 'pending'
     progress: float = 0
-    import_type: str = "missing"
-    import_id: str
-    task_id: str
-    event_type: str = "missing"
+    type: str
+    params: dict = {}
 
     @validator("status")
     def validate_status(cls, value):
