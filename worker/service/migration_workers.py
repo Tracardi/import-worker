@@ -47,7 +47,7 @@ def reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
                 break
             status = task_response.json()["task"]["status"]
             update_progress(celery_job, status["updated"] + status["created"], status["total"])
-            sleep(.5)
+            sleep(3)
 
         logging.info(f"Migration from `{schema.copy_index.from_index}` to `{schema.copy_index.to_index}` complete.")
 
