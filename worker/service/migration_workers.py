@@ -5,6 +5,7 @@ from worker.misc.add_task import add_task
 import logging
 from time import sleep
 
+
 class MigrationError(Exception):
     pass
 
@@ -18,13 +19,6 @@ def reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
         celery_job,
         schema.dict()
     )
-
-    with requests.get(f"{url}/{schema.copy_index.from_index}/_search") as response:
-
-        if response.status_code != 200:
-            raise MigrationError(response.text)
-
-        total = response.json()["hits"]["total"]["value"]
 
     body = {
         "source": {
