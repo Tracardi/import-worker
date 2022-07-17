@@ -122,36 +122,36 @@ def run_migration_worker(self, worker_func, schema, elastic_host, task_index):
     worker_function(self, MigrationSchema(**schema), elastic_host, task_index)
 
 
-if __name__ == "__main__":
-    import_mysql_data_with_query(
-        celery_job=None,
-        import_config={
-            "name": "test",
-            "description": "desc",
-            "api_url": "http://localhost:8686",
-            "event_source": NamedEntity(
-                id="@test-source",
-                name="test"
-            ).dict(),
-            "event_type": "import-mysql-query",
-            "module": "mod",
-            "config": {
-                "index": NamedEntity(id="tracardi-log-2022-5", name="mysql").dict(),
-                "batch": 2,
-                "database_name": {"id": "Rfam", "name": "Rfam"},
-                "query": "SELECT * FROM family WHERE match_pair_node=false",
-            },
-            "enabled": True,
-            "transitional": False
-        },
-        credentials=MysqlQueryConnConfig(
-            host="mysql-rfam-public.ebi.ac.uk",
-            user="rfamro",
-            password=None,
-            port=4497
-        ).dict()
-    )
-
+# if __name__ == "__main__":
+#     import_mysql_data_with_query(
+#         celery_job=None,
+#         import_config={
+#             "name": "test",
+#             "description": "desc",
+#             "api_url": "http://localhost:8686",
+#             "event_source": NamedEntity(
+#                 id="@test-source",
+#                 name="test"
+#             ).dict(),
+#             "event_type": "import-mysql-query",
+#             "module": "mod",
+#             "config": {
+#                 "index": NamedEntity(id="tracardi-log-2022-5", name="mysql").dict(),
+#                 "batch": 2,
+#                 "database_name": {"id": "Rfam", "name": "Rfam"},
+#                 "query": "SELECT * FROM family WHERE match_pair_node=false",
+#             },
+#             "enabled": True,
+#             "transitional": False
+#         },
+#         credentials=MysqlQueryConnConfig(
+#             host="mysql-rfam-public.ebi.ac.uk",
+#             user="rfamro",
+#             password=None,
+#             port=4497
+#         ).dict()
+#     )
+#
 
 #if __name__ == "__main__":
 #    import_elastic_data(
