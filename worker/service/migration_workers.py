@@ -69,6 +69,9 @@ def user_reindex(celery_job, schema: MigrationSchema, url: str, task_index: str)
         pagesize = 10
         moved_records = 0
 
+        if schema.copy_index.script is None:
+            schema.copy_index.script = ""
+
         while True:
             records_to_move = requests.get(
                 f"{url}/{schema.copy_index.from_index}/_search?from={moved_records}&size={pagesize}"
@@ -78,18 +81,28 @@ def user_reindex(celery_job, schema: MigrationSchema, url: str, task_index: str)
                 break
 
             for number, record in enumerate(records_to_move):
-                user_exists = requests.get(
+                user = requests.get(
                     f"{url}/{schema.copy_index.to_index}/_doc/{record['_id']}"
-                ).status_code == 200
+                )
+                user_exists = user.status_code == 200
 
                 record = {key: record["_source"][key] for key in record["_source"] if key != "token"}
 
-                if not user_exists:
-                    record["token"] = None
-                    requests.post(f"{url}/{schema.copy_index.to_index}/_create/{record['id']}", json=record)
-
+                if user_exists:
+                    record["token"] = user.json()["_source"]["token"]
                 else:
-                    requests.post(f"{url}/{schema.copy_index.to_index}/_update/{record['id']}", json={"doc": record})
+                    record["token"] = None
+
+                requests.post(f"{url}/{schema.copy_index.to_index}/_update/{record['id']}", json={
+                    "scripted_upsert": True,
+                    "script": {
+                        "source": f"ctx._source = params.document;\n{schema.copy_index.script}",
+                        "params": {
+                            "document": record
+                        }
+                    },
+                    "upsert": {}
+                 })
 
                 update_progress(celery_job, moved_records + number + 1, doc_count)
 
