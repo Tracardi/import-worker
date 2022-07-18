@@ -52,3 +52,48 @@ def reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
         logging.info(f"Migration from `{schema.copy_index.from_index}` to `{schema.copy_index.to_index}` complete.")
 
         update_progress(celery_job, 100)
+
+
+def user_reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
+    add_task(
+        url,
+        task_index,
+        f"Migration of \"{schema.copy_index.from_index}\"",
+        celery_job,
+        schema.dict()
+    )
+
+    try:
+        doc_count = requests.get(f"{url}/{schema.copy_index.from_index}/_count").json()["count"]
+        update_progress(celery_job, 0, doc_count)
+        pagesize = 10
+        moved_records = 0
+
+        while True:
+            records_to_move = requests.get(
+                f"{url}/{schema.copy_index.from_index}/_search?from={moved_records}&size={pagesize}"
+            ).json()["hits"]["hits"]
+
+            if not records_to_move:
+                break
+
+            for number, record in enumerate(records_to_move):
+                user_exists = requests.get(
+                    f"{url}/{schema.copy_index.to_index}/_doc/{record['_id']}"
+                ).status_code == 200
+
+                record = {key: record["_source"][key] for key in record["_source"] if key != "token"}
+
+                if not user_exists:
+                    record["token"] = None
+                    requests.post(f"{url}/{schema.copy_index.to_index}/_create/{record['id']}", json=record)
+
+                else:
+                    requests.post(f"{url}/{schema.copy_index.to_index}/_update/{record['id']}", json={"doc": record})
+
+                update_progress(celery_job, moved_records + number + 1, doc_count)
+
+            moved_records += pagesize
+
+    except Exception as e:
+        raise MigrationError(f"User index could not be moved due to an error: {str(e)}")
