@@ -8,7 +8,7 @@ from worker.service.import_dispatcher import ImportDispatcher
 from worker.domain.import_config import ImportConfig
 from worker.domain.migration_schema import MigrationSchema
 import logging
-import worker.service.migration_workers as migration_workers
+import worker.service.worker.migration_workers as migration_workers
 from worker.misc.update_progress import update_progress
 from worker.misc.add_task import add_task
 
@@ -111,10 +111,9 @@ def run_migration_job(self, schemas, elastic_host, task_index):
 
 @celery.task(bind=True)
 def run_migration_worker(self, worker_func, schema, elastic_host, task_index):
-    try:
-        worker_function = getattr(migration_workers, worker_func)
+    worker_function = getattr(migration_workers, worker_func, None)
 
-    except AttributeError:
+    if worker_function is None:
         logger.log(level=logging.ERROR, msg=f"No migration worker defined for name {schema.worker}. "
                                             f"Skipping migration with name {schema.name}")
         return
