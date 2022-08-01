@@ -12,7 +12,8 @@ setup(
         'redis',
         'mysql-connector-python == 8.0.29',
         'pydantic',
-        'requests'
+        'requests',
+        'elasticsearch==7.10.1'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
