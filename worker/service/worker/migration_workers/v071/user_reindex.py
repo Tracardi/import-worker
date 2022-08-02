@@ -6,7 +6,8 @@ import requests
 @reindex_with_operation
 def user_reindex(celery_job, schema: MigrationSchema, url: str, task_index: str, record: dict):
     user = requests.get(
-        f"{url}/{schema.copy_index.to_index}/_doc/{record['_id']}"
+        f"{url}/{schema.copy_index.to_index}/_doc/{record['_id']}",
+        verify=False
     )
     user_exists = user.status_code == 200
 

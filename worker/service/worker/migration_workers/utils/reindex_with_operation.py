@@ -18,7 +18,10 @@ def reindex_with_operation(func):
         )
 
         try:
-            doc_count = requests.get(f"{url}/{schema.copy_index.from_index}/_count").json()["count"]
+            doc_count = requests.get(
+                f"{url}/{schema.copy_index.from_index}/_count",
+                verify=False
+            ).json()["count"]
             update_progress(celery_job, 0, doc_count)
             pagesize = 10
             moved_records = 0
@@ -28,26 +31,28 @@ def reindex_with_operation(func):
 
             while True:
                 records_to_move = requests.get(
-                    f"{url}/{schema.copy_index.from_index}/_search?from={moved_records}&size={pagesize}"
+                    f"{url}/{schema.copy_index.from_index}/_search?from={moved_records}&size={pagesize}",
+                    verify=False
                 ).json()["hits"]["hits"]
 
                 if not records_to_move:
                     break
 
                 for number, record in enumerate(records_to_move):
-
                     record = func(celery_job, schema, url, task_index, record)
 
-                    requests.post(f"{url}/{schema.copy_index.to_index}/_update/{record['_id']}", json={
-                        "scripted_upsert": True,
-                        "script": {
-                            "source": f"ctx._source = params.document;\n{schema.copy_index.script}",
-                            "params": {
-                                "document": record["_source"]
-                            }
-                        },
-                        "upsert": {}
-                    })
+                    requests.post(f"{url}/{schema.copy_index.to_index}/_update/{record['_id']}",
+                                  verify=False,
+                                  json={
+                                      "scripted_upsert": True,
+                                      "script": {
+                                          "source": f"ctx._source = params.document;\n{schema.copy_index.script}",
+                                          "params": {
+                                              "document": record["_source"]
+                                          }
+                                      },
+                                      "upsert": {}
+                                  })
 
                     update_progress(celery_job, moved_records + number + 1, doc_count)
 
