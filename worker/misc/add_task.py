@@ -23,7 +23,8 @@ def add_task(elastic_host: str, task_index: str, name: str, job, params=None):
             "event_type": "missing",
             "params": params,
             "task_id": job.request.id
-        }
+        },
+        verify=False
     ) as response:
 
         if response.status_code // 100 == 2:

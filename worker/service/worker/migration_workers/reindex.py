@@ -31,7 +31,8 @@ def reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
 
     with requests.post(
         url=f"{url}/_reindex?wait_for_completion=false",
-        json=body
+        json=body,
+        verify=False
     ) as response:
 
         if response.status_code != 200:
@@ -39,7 +40,7 @@ def reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
 
         task_id = response.json()["task"]
         while True:
-            task_response = requests.get(f"{url}/_tasks/{task_id}")
+            task_response = requests.get(f"{url}/_tasks/{task_id}", verify=False)
             if task_response.status_code != 200 or task_response.json()["completed"] is True:
                 break
             status = task_response.json()["task"]["status"]
