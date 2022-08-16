@@ -30,6 +30,9 @@ def reindex_with_operation(func):
                 schema.copy_index.script = ""
 
             while True:
+
+                # TODO Writing code it totally forbidden. It is very error prone ane it is impossible to
+                #  refactor this type of code. Requesting Elastic must have a facade.
                 records_to_move = requests.get(
                     f"{url}/{schema.copy_index.from_index}/_search?from={moved_records}&size={pagesize}",
                     verify=False
