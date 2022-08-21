@@ -1,9 +1,9 @@
 from worker.domain.migration_schema import MigrationSchema
 from worker.misc.update_progress import update_progress
 from worker.misc.add_task import add_task
-import requests
 from worker.service.worker.migration_workers.utils.migration_error import MigrationError
 import functools
+from .client import ElasticClient
 
 
 def reindex_with_operation(func):
@@ -17,49 +17,42 @@ def reindex_with_operation(func):
             schema.dict()
         )
 
+        def transform_func(data):
+            return func(celery_job, schema, url, task_index, data)
+
         try:
-            doc_count = requests.get(
-                f"{url}/{schema.copy_index.from_index}/_count",
-                verify=False
-            ).json()["count"]
-            update_progress(celery_job, 0, doc_count)
-            pagesize = 10
-            moved_records = 0
+            with ElasticClient(hosts=[url]) as client:
+                doc_count = client.count(schema.copy_index.from_index)
+                update_progress(celery_job, 0, doc_count)
+                pagesize = 10
+                moved_records = 0
 
-            if schema.copy_index.script is None:
-                schema.copy_index.script = ""
+                if schema.copy_index.script is None:
+                    schema.copy_index.script = ""
 
-            while True:
+                while True:
 
-                # TODO Writing code it totally forbidden. It is very error prone ane it is impossible to
-                #  refactor this type of code. Requesting Elastic must have a facade.
-                records_to_move = requests.get(
-                    f"{url}/{schema.copy_index.from_index}/_search?from={moved_records}&size={pagesize}",
-                    verify=False
-                ).json()["hits"]["hits"]
+                    records_to_move = client.load_records(
+                        index=schema.copy_index.from_index,
+                        start=moved_records,
+                        size=pagesize
+                    )
 
-                if not records_to_move:
-                    break
+                    if not records_to_move:
+                        break
 
-                for number, record in enumerate(records_to_move):
-                    record = func(celery_job, schema, url, task_index, record)
+                    records_to_move.transform_hits(transform_func)
 
-                    requests.post(f"{url}/{schema.copy_index.to_index}/_update/{record['_id']}",
-                                  json={
-                                      "scripted_upsert": True,
-                                      "script": {
-                                          "source": f"ctx._source = params.document;\n{schema.copy_index.script}",
-                                          "params": {
-                                              "document": record["_source"]
-                                          }
-                                      },
-                                      "upsert": {}
-                                  },
-                                  verify=False)
+                    for number, record in enumerate(records_to_move):
+                        client.upsert(
+                            index=schema.copy_index.to_index,
+                            record=record,
+                            script=schema.copy_index.script
+                        )
 
-                    update_progress(celery_job, moved_records + number + 1, doc_count)
+                        update_progress(celery_job, moved_records + number + 1, doc_count)
 
-                moved_records += pagesize
+                    moved_records += pagesize
 
         except Exception as e:
             raise MigrationError(f"Index {schema.copy_index.from_index} could not be moved due to an error: {str(e)}")

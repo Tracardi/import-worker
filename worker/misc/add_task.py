@@ -1,6 +1,7 @@
-import requests
+from worker.service.worker.migration_workers.utils.client import ElasticClient
 from datetime import datetime
 import logging
+from tracardi.domain.storage_record import StorageRecord, RecordMetadata
 
 
 logger = logging.getLogger("logger")
@@ -10,26 +11,23 @@ def add_task(elastic_host: str, task_index: str, name: str, job, params=None):
 
     if params is None:
         params = {}
-
-    with requests.post(
-        url=f"{elastic_host}/{task_index}/_doc",
-        json={
-            "id": job.request.id,
-            "name": name,
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
-            "status": "PROGRESS",
-            "type": "upgrade",
-            "progress": 0.,
-            "event_type": "missing",
-            "params": params,
-            "task_id": job.request.id
-        },
-        verify=False
-    ) as response:
-
-        if response.status_code // 100 == 2:
+    try:
+        with ElasticClient(hosts=[elastic_host]) as client:
+            task = StorageRecord({
+                    "id": job.request.id,
+                    "name": name,
+                    "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+                    "status": "PROGRESS",
+                    "type": "upgrade",
+                    "progress": 0.,
+                    "event_type": "missing",
+                    "params": params,
+                    "task_id": job.request.id
+            })
+            task.set_meta_data(RecordMetadata(id=task["id"], index=task_index))
+            client.upsert(task_index, task, "")
             logger.info(msg=f"Successfully added task with ID {job.request.id}")
 
-        else:
-            logger.info(msg=f"Could not add task with ID {job.request.id} due to an error: {response.text}")
+    except Exception as e:
+        logger.info(msg=f"Could not add task with ID {job.request.id} due to an error: {str(e)}")
 
