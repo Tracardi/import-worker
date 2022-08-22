@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch
-from tracardi.domain.storage_record import StorageRecords, StorageRecord, RecordMetadata
+from worker.domain.storage_record import StorageRecords, StorageRecord, RecordMetadata
 from typing import Optional
 from elasticsearch.exceptions import NotFoundError
 

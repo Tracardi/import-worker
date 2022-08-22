@@ -1,7 +1,7 @@
 from worker.service.worker.migration_workers.utils.client import ElasticClient
 from datetime import datetime
 import logging
-from tracardi.domain.storage_record import StorageRecord, RecordMetadata
+from worker.domain.storage_record import StorageRecord, RecordMetadata
 
 
 logger = logging.getLogger("logger")

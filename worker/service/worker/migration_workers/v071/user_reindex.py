@@ -1,7 +1,7 @@
 from worker.service.worker.migration_workers.utils.reindex_with_operation import reindex_with_operation
 from worker.domain.migration_schema import MigrationSchema
 from worker.service.worker.migration_workers.utils.client import ElasticClient
-from tracardi.domain.storage_record import StorageRecord
+from worker.domain.storage_record import StorageRecord
 
 
 @reindex_with_operation

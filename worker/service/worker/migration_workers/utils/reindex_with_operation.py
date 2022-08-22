@@ -22,24 +22,18 @@ def reindex_with_operation(func):
 
         try:
             with ElasticClient(hosts=[url]) as client:
-                doc_count = client.count(schema.copy_index.from_index)
-                update_progress(celery_job, 0, doc_count)
+                update_progress(celery_job, 0, doc_count := client.count(schema.copy_index.from_index))
                 pagesize = 10
                 moved_records = 0
 
                 if schema.copy_index.script is None:
                     schema.copy_index.script = ""
 
-                while True:
-
-                    records_to_move = client.load_records(
+                while records_to_move := client.load_records(
                         index=schema.copy_index.from_index,
                         start=moved_records,
                         size=pagesize
-                    )
-
-                    if not records_to_move:
-                        break
+                ):
 
                     records_to_move.transform_hits(transform_func)
 
