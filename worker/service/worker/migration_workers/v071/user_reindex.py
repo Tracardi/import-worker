@@ -5,15 +5,15 @@ from worker.domain.storage_record import StorageRecord
 
 
 @reindex_with_operation
-def user_reindex(celery_job, schema: MigrationSchema, url: str, task_index: str, record: StorageRecord):
+def user_reindex(celery_job, schema: MigrationSchema, url: str, task_index: str, record: dict):
     with ElasticClient(hosts=[url]) as client:
-        user = client.load(schema.copy_index.from_index, record.get_meta_data().id)
+        user = client.load(schema.copy_index.from_index, record["id"])
         user_exists = user is not None
 
         record = StorageRecord({key: record[key] for key in record if key != "token"})
 
         if user_exists:
-            record["token"] = user["token"]
+            record["token"] = user["_source"]["token"]
         else:
             record["token"] = None
 
