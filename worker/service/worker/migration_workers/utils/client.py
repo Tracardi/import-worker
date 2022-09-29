@@ -1,4 +1,6 @@
 from elasticsearch import Elasticsearch
+
+from worker.config import elasticsearch_config
 from worker.domain.storage_record import StorageRecords, StorageRecord, RecordMetadata
 from typing import Optional
 from elasticsearch.exceptions import NotFoundError
@@ -6,8 +8,11 @@ from elasticsearch.exceptions import NotFoundError
 
 class ElasticClient:
 
-    def __init__(self, *args, **kwargs):
-        self._client = Elasticsearch(*args, **kwargs)
+    def __init__(self, hosts):
+        config = elasticsearch_config.get_elasticsearch_config()
+        if 'hosts' not in config:
+            config['hosts'] = hosts
+        self._client = Elasticsearch(**config)
 
     def __enter__(self) -> 'ElasticClient':
         return self
