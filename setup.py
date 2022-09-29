@@ -9,9 +9,9 @@ setup(
     packages=['worker'],
     install_requires=[
         'certifi==2022.9.24',
-        'celery == 5.2.6',
+        'celery==5.2.6',
         'redis',
-        'mysql-connector-python == 8.0.29',
+        'mysql-connector-python==8.0.29',
         'pydantic',
         'requests',
         'elasticsearch==7.10.1'
