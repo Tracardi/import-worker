@@ -10,7 +10,7 @@ setup(
     install_requires=[
         'certifi==2022.9.24',
         'celery==5.2.6',
-        'redis',
+        'redis==4.3.4',
         'mysql-connector-python==8.0.29',
         'pydantic',
         'requests',
