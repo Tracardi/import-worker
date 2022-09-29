@@ -1,0 +1,1 @@
+REDIS_HOST=192.168.1.106 celery -A worker.celery_worker worker -l info
