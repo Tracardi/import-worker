@@ -8,6 +8,7 @@ setup(
     author_email='risto.kowaczewski@gmail.com',
     packages=['worker'],
     install_requires=[
+        'certifi==2022.9.24',
         'celery == 5.2.6',
         'redis',
         'mysql-connector-python == 8.0.29',
