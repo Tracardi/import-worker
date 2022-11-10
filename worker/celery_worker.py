@@ -60,7 +60,7 @@ def import_mysql_data_with_query(celery_job, import_config, credentials):
 
 
 def migrate_data(celery_job, schemas, elastic_host, task_index):
-    logger.info("Migration starts")
+    logger.info(f"Migration starts for elastic: {elastic_host}")
     schemas = [MigrationSchema(**schema) for schema in schemas]
     total = len(schemas)
     progress = 0
