@@ -13,7 +13,7 @@ class StorageRecord(dict):
     @staticmethod
     def build_from_elastic(elastic_record: dict) -> 'StorageRecord':
         record = StorageRecord(**elastic_record['_source'])
-        record.set_meta_data(RecordMetadata(id=elastic_record['_id'], index=elastic_record['_index']))
+        record.set_meta_data(RecordMetadata(id=record['id'], index=elastic_record['_index']))
         return record
 
     @staticmethod
@@ -112,8 +112,6 @@ class StorageRecords(dict):
     @staticmethod
     def _to_record(hit):
         row = StorageRecord.build_from_elastic(hit)
-        row['id'] = hit['_id']
-
         return row
 
     def __repr__(self):
@@ -139,8 +137,6 @@ class StorageRecords(dict):
     def first(self) -> StorageRecord:
         first_hit = self._hits[0]
         row = StorageRecord.build_from_elastic(first_hit)
-        row['id'] = first_hit['_id']
-
         return row
 
     def dict(self):
