@@ -18,7 +18,7 @@ celery = Celery(
     backend=redis_config.get_redis_with_password()
 )
 
-logger = logging.getLogger("logger")
+logger = logging.getLogger(__name__)
 
 
 def import_mysql_table_data(celery_job, import_config, credentials):

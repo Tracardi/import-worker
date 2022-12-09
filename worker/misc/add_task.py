@@ -4,7 +4,7 @@ import logging
 from worker.domain.storage_record import StorageRecord, RecordMetadata
 
 
-logger = logging.getLogger("logger")
+logger = logging.getLogger(__name__)
 
 
 def add_task(elastic_host: str, task_index: str, name: str, job, params=None):
