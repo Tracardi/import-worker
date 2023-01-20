@@ -61,6 +61,7 @@ def import_mysql_data_with_query(celery_job, import_config, credentials):
 
 def migrate_data(celery_job, schemas, elastic_host, task_index):
     logger.info(f"Migration starts for elastic: {elastic_host}")
+
     schemas = [MigrationSchema(**schema) for schema in schemas]
     total = len(schemas)
     progress = 0
@@ -69,10 +70,13 @@ def migrate_data(celery_job, schemas, elastic_host, task_index):
         logger.info(f"Scheduled migration of {schema.copy_index.from_index} to {schema.copy_index.to_index}")
 
     update_progress(celery_job, progress, total)
+
+    # Adds task to database
     add_task(elastic_host, task_index, "Migration plan orchestrator", celery_job)
 
     sync_chain = None
     for schema in schemas:
+
         if schema.asynchronous is True:
             result = run_migration_worker.delay(schema.worker, schema.dict(), elastic_host, task_index)
             logger.info(f"Running worker {schema.worker} as job {result}")
@@ -117,4 +121,10 @@ def run_migration_worker(self, worker_func, schema, elastic_host, task_index):
                                             f"Skipping migration with name {schema.name}")
         return
 
+    # Runs all workers defined in worker.service.worker.migration_workers.__init__
+    # All have defined interface of:
+    #   * celery_job,
+    #   * schema: MigrationSchema,
+    #   * elastic_url: str, task_index: str
+    #   * elastic_task_index - this is for saving progress
     worker_function(self, MigrationSchema(**schema), elastic_host, task_index)

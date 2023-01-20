@@ -20,8 +20,8 @@ class ElasticClient:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self._client.close()
 
-    def reindex(self, body: dict) -> dict:
-        return self._client.reindex(body=body, wait_for_completion=False)
+    def reindex(self, body: dict, wait_for_completion=False) -> dict:
+        return self._client.reindex(body=body, wait_for_completion=wait_for_completion)
 
     def count(self, index: str) -> int:
         return self._client.count(index=index).get("count", 0)

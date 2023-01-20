@@ -31,20 +31,33 @@ def reindex(celery_job, schema: MigrationSchema, url: str, task_index: str):
 
     with ElasticClient(hosts=[url]) as client:
 
-        response = client.reindex(body=body)
+        response = client.reindex(body=body, wait_for_completion=schema.wait_for_completion)
+        logging.info(f"Reindexing with\n{body}\nResponse:\n{response}")
 
-        if not isinstance(response, dict) or "task" not in response:
+        if not isinstance(response, dict) :
             raise MigrationError(str(response))
 
-        task_id = response["task"]
-        while True:
-            task_response = client.get_task(task_id)
-            if task_response is None or task_response["completed"] is True:
-                break
-            status = task_response["task"]["status"]
-            update_progress(celery_job, status["updated"] + status["created"], status["total"])
-            sleep(3)
+        if schema.wait_for_completion is True:
 
-        logging.info(f"Migration from `{schema.copy_index.from_index}` to `{schema.copy_index.to_index}` complete.")
+            if 'failures' in response and len(response['failures']) > 0:
+                raise MigrationError(f"Import encountered failures: {response['failures']}")
 
-        update_progress(celery_job, 100)
+        if schema.wait_for_completion is False:
+            # Async processing
+            if "task" not in response:
+                raise MigrationError("No task in reindex response.")
+
+            task_id = response["task"]
+
+            while True:
+                task_response = client.get_task(task_id)
+                if task_response is None or task_response["completed"] is True:
+                    break
+                status = task_response["task"]["status"]
+                update_progress(celery_job, status["updated"] + status["created"], status["total"])
+                sleep(3)
+
+            logging.info(f"Migration from `{schema.copy_index.from_index}` to `{schema.copy_index.to_index}` complete.")
+
+            update_progress(celery_job, 100)
+
