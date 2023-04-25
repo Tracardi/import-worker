@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='worker',
-    version='0.8.1-dev',
+    version='0.8.2-dev',
     description='Tracardi Customer Data Platform Import worker',
     author='Risto Kowaczewski',
     author_email='risto.kowaczewski@gmail.com',
