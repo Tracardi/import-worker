@@ -1,4 +1,6 @@
-REDIS_HOST=localhost ELASTIC_VERIFY_CERTS=no ELASTIC_HOST=https://elastic:NX499fCnF3431F9a6xoC0mQU@192.168.1.190:9200 celery -A worker.celery_worker worker -l info -E 
+MOVED TO tracardi/worker
+
+REDIS_HOST=localhost ELASTIC_VERIFY_CERTS=no ELASTIC_HOST=https://elastic:NX499fCnF3431F9a6xoC0mQU@192.168.1.190:9200 celery -A worker.celery_worker worker -l info -E
 REDIS_HOST=localhost ELASTIC_VERIFY_CERTS=no ELASTIC_HOST=http://locahost:9200 celery -A worker.celery_worker worker -l info -E
 
 # Shows queues
